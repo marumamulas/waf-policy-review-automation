@@ -13,7 +13,7 @@ class PDF(FPDF):
             self.set_font("helvetica", "B", 12)
             self.set_text_color(0, 0, 0)
             self.cell(0, 10, f"Sr. No. {sr_no} ", new_x="RIGHT")
-            
+
     def footer(self):
         self.set_y(-15)
         self.set_font("helvetica", "I", 8)
@@ -81,11 +81,13 @@ label_w = usable_w * 0.35
 value_w = usable_w * 0.65
 line_h = 8
 
-# --- MULTI-CELL CELL-HEIGHT CORRECTED LAYOUT ENGINE ---
-def row(label, values):
+# --- LAYOUT RENDERING ENGINE ---
+
+def render_row(label, values):
+    """Renders a single-line comma-separated row in black."""
     text = ", ".join(str(x) for x in values) if isinstance(values, list) else str(values)
     pdf.set_font("helvetica", "", 10)
-    pdf.set_text_color(0, 0, 0) # Isolate state
+    pdf.set_text_color(0, 0, 0)
     x0, y0 = pdf.get_x(), pdf.get_y()
     pdf.set_xy(x0 + label_w, y0)
     pdf.multi_cell(value_w, line_h, text, border=1)
@@ -95,10 +97,11 @@ def row(label, values):
     pdf.cell(label_w, end_y - y0, label, border=1)
     pdf.set_xy(pdf.l_margin, end_y)
 
-def row2(label, values):
+def render_multiline_row(label, values):
+    """Renders a newline-separated multi-line row in black."""
     text = "\n".join(str(x) for x in values) if isinstance(values, list) else str(values)
     pdf.set_font("helvetica", "", 10)
-    pdf.set_text_color(0, 0, 0) # Isolate state
+    pdf.set_text_color(0, 0, 0)
     x0, y0 = pdf.get_x(), pdf.get_y()
     pdf.set_xy(x0 + label_w, y0)
     pdf.multi_cell(value_w, line_h, text, border=1)
@@ -108,32 +111,32 @@ def row2(label, values):
     pdf.cell(label_w, end_y - y0, label, border=1)
     pdf.set_xy(pdf.l_margin, end_y)
 
-def row3(label, values):
-    """ Renders Critical Security Violation Fields in Red """
+def render_violation_row(label, values):
+    """Renders critical security violation fields in red."""
     text = "\n".join(str(x) for x in values) if isinstance(values, list) else str(values)
     pdf.set_font("helvetica", "", 10)
     x0, y0 = pdf.get_x(), pdf.get_y()
     pdf.set_xy(x0 + label_w, y0)
-    pdf.set_text_color(220, 0, 0) # Safe Red
+    pdf.set_text_color(220, 0, 0)
     pdf.multi_cell(value_w, line_h, text, border=1)
     end_y = pdf.get_y()
     pdf.set_xy(x0, y0)
-    pdf.set_text_color(0, 0, 0) # Instantly pull back to black for labels
+    pdf.set_text_color(0, 0, 0)
     pdf.set_font("helvetica", "B", 10)
     pdf.cell(label_w, end_y - y0, label, border=1)
     pdf.set_xy(pdf.l_margin, end_y)
 
-def row4(label, values):
-    """ Renders Compliant Active Security Baselines in Green """
+def render_compliant_row(label, values):
+    """Renders compliant active security baselines in green."""
     text = "\n".join(str(x) for x in values) if isinstance(values, list) else str(values)
     pdf.set_font("helvetica", "", 10)
     x0, y0 = pdf.get_x(), pdf.get_y()
     pdf.set_xy(x0 + label_w, y0)
-    pdf.set_text_color(0, 128, 0) # Clear Compliant Green
+    pdf.set_text_color(0, 128, 0)
     pdf.multi_cell(value_w, line_h, text, border=1)
     end_y = pdf.get_y()
     pdf.set_xy(x0, y0)
-    pdf.set_text_color(0, 0, 0) # Clean reset
+    pdf.set_text_color(0, 0, 0)
     pdf.set_font("helvetica", "B", 10)
     pdf.cell(label_w, end_y - y0, label, border=1)
     pdf.set_xy(pdf.l_margin, end_y)
@@ -153,123 +156,135 @@ else:
             except json.JSONDecodeError:
                 print(f"Skipping malformed profile payload: {file_path.name}")
                 continue
-                
+
             policy = data.get('policy', {})
             name = policy.get('name', 'Unidentified_Policy_Profile')
-            
+
             blocking = policy.get('blocking-settings', {})
             evasions = blocking.get('evasions', [])
             evasion_violation = [r['description'] for r in evasions if r.get('enabled') is False]
-            
+
             http_protocols = blocking.get('http-protocols', [])
             http_violation = [r['description'] for r in http_protocols if r.get('enabled') is False]
-            
+
             violations = blocking.get('violations', [])
             violation = [r['description'] for r in violations if r.get('block') is False]
-            
+
             file_types = policy.get('filetypes', [])
             file_type = [r.get('name') for r in file_types if r.get('name') == '*']
-            
+
             response_codes = policy.get('general', {}).get('allowedResponseCodes', [])
             headers = policy.get('headers', [])
             headers_violation = [r['name'] for r in headers if r['name'] == '*']
-            
+
             hostnames = policy.get('host-names', [])
             hostname = [r['name'] for r in hostnames if isinstance(r, dict) and 'name' in r]
-            
+
             ip_intelligence = policy.get('ip-intelligence', {}).get('ipIntelligenceCategories', [])
             ip_intel_violation = [r['category'] for r in ip_intelligence if r.get('block') is False]
-            
+
             methods = policy.get('methods', [])
             method_names = [m.get('name') for m in methods if isinstance(m, dict) and 'name' in m]
-            
+
             wildcard_urls = policy.get('urls', [])
-            url_violation = [r.get('name') for r in wildcard_urls if r.get('name') == '*']    
-            
+            url_violation = [r.get('name') for r in wildcard_urls if r.get('name') == '*']
+
             signatures = policy.get('signatures', [])
             signatures_violation = [r['signatureId'] for r in signatures if r.get('enabled') is False]
             staging = [r['signatureId'] for r in signatures if r.get('performStaging') is True]
             count_staging = len(staging)
-            
+
             whitelist_ips = policy.get('whitelist-ips', [])
-            Whitelisted = [r['ipAddress'] for r in whitelist_ips if isinstance(r, dict) and 'ipAddress' in r]
-            
+            whitelisted = [r['ipAddress'] for r in whitelist_ips if isinstance(r, dict) and 'ipAddress' in r]
+
             parameters = policy.get('parameters', [])
             parameters_violation = [r['name'] for r in parameters if r['name'] == '*']
-            
+
             policy_builder = policy.get('policy-builder', {})
-            learning_mode = policy_builder.get("learningMode", "Disabled/Not Configured")  
-            
+            learning_mode = policy_builder.get("learningMode", "Disabled/Not Configured")
+
             redirection_domains = policy.get('redirection-protection', {}).get('redirectionDomains', [])
             redirection = [r if isinstance(r, str) else r.get('domainName', '') for r in redirection_domains]
-            
+
             signature_sets = {"High Accuracy Signatures", "Medium Accuracy Signatures"}
-            signature_sets_violation = [s["name"] for s in policy.get("signature-sets", []) if isinstance(s, dict) and s.get("name") in signature_sets and s.get("block") is False]
-            
+            signature_sets_violation = [
+                s["name"] for s in policy.get("signature-sets", [])
+                if isinstance(s, dict) and s.get("name") in signature_sets and s.get("block") is False
+            ]
+
             # --- START DYNAMIC GENERATION PER POLICY PAGE ---
             pdf.add_page()
             if os.path.exists(logo_path):
                 pdf.image(logo_path, x=170, y=10, w=30)
             pdf.ln(5)
-            
+
             pdf.set_font('helvetica', 'B', 12)
             pdf.cell(0, 10, f"Application Profile Name: {name}", new_x='LMARGIN', new_y='NEXT')
             pdf.ln(2)
-                 
+
             if hostname:
-                row2("Hostnames", hostname)
+                render_multiline_row("Hostnames", hostname)
             else:
-                row2("Hostnames", "No Hostname configured")
-                
-            row("Policy Builder Setting", learning_mode)
-            row("HTTP Methods Allowed", method_names if method_names else "Default Standard Methods")
-            row("HTTP Response Codes Allowed", response_codes if response_codes else "None Configured")
+                render_multiline_row("Hostnames", "No Hostname configured")
+
+            render_row("Policy Builder Setting", learning_mode)
+            render_row("HTTP Methods Allowed", method_names if method_names else "Default Standard Methods")
+            render_row("HTTP Response Codes Allowed", response_codes if response_codes else "None Configured")
 
             if evasion_violation:
-                row3("Exceptions to Evasion Techniques", evasion_violation)
+                render_violation_row("Exceptions to Evasion Techniques", evasion_violation)
             else:
-                row4("Exceptions to Evasion Techniques", "Nil (Fully Protected)")
-                
+                render_compliant_row("Exceptions to Evasion Techniques", "Nil (Fully Protected)")
+
             if http_violation:
-                row3("Exceptions to HTTP-Protocol", http_violation)
+                render_violation_row("Exceptions to HTTP-Protocol", http_violation)
             else:
-                row4("Exceptions to HTTP-Protocol", "Nil (Fully Protected)")
-            
+                render_compliant_row("Exceptions to HTTP-Protocol", "Nil (Fully Protected)")
+
             if ip_intel_violation:
-                row3("IP Intelligence Categories disabled", ip_intel_violation)
+                render_violation_row("IP Intelligence Categories disabled", ip_intel_violation)
             else:
-                row4("IP Intelligence Categories disabled", "Nil (All Threat Feeds Blocking)")
+                render_compliant_row("IP Intelligence Categories disabled", "Nil (All Threat Feeds Blocking)")
+
             if redirection:
-                row2("Redirection Domains Protection", redirection)
+                render_multiline_row("Redirection Domains Protection", redirection)
             else:
-                row4("Redirection Domains Protection", "Nil")
+                render_compliant_row("Redirection Domains Protection", "Nil")
+
             if signature_sets_violation:
-                row3("Signature Sets Alerting Only", f"Disabled/Alerting: {signature_sets_violation}")
+                render_violation_row("Signature Sets Alerting Only", f"Disabled/Alerting: {signature_sets_violation}")
             else:
-                row4("Signature Sets Status", "High & Medium Accuracy Signatures Actively Blocking")
+                render_compliant_row("Signature Sets Status", "High & Medium Accuracy Signatures Actively Blocking")
+
             if signatures_violation:
-                row("Signature IDs disabled", signatures_violation)
+                render_row("Signature IDs disabled", signatures_violation)
             else:
-                row4("Signature IDs disabled", "Nil")
+                render_compliant_row("Signature IDs disabled", "Nil")
+
             if count_staging == 0:
-                row4("No. of Signature IDs in Staging", "Nil")
+                render_compliant_row("No. of Signature IDs in Staging", "Nil")
             else:
-                row("No. of Signature IDs in Staging", f"{count_staging} Signatures Staging")
+                render_row("No. of Signature IDs in Staging", f"{count_staging} Signatures Staging")
+
             if url_violation:
-                row3("Wildcard URLs Allowed", "Yes (Potential Security Gap)")
+                render_violation_row("Wildcard URLs Allowed", "Yes (Potential Security Gap)")
             else:
-                row4("Wildcard URLs Allowed", "No (Strict URL Enforcement)")
+                render_compliant_row("Wildcard URLs Allowed", "No (Strict URL Enforcement)")
+
             if file_type:
-                row3("Wildcard File Types Allowed", "Yes (Potential Security Gap)")
+                render_violation_row("Wildcard File Types Allowed", "Yes (Potential Security Gap)")
             else:
-                row4("Wildcard File Types Allowed", "No (Strict Extension Enforcement)")
+                render_compliant_row("Wildcard File Types Allowed", "No (Strict Extension Enforcement)")
+
             if parameters_violation:
-                row3("Wildcard Parameters Allowed", "Yes (Potential Security Gap)")
+                render_violation_row("Wildcard Parameters Allowed", "Yes (Potential Security Gap)")
             else:
-                row4("Wildcard Parameters Allowed", "No (Strict Parameter Enforced)")
-            if Whitelisted:
-                row("Whitelisted Management IPs", Whitelisted)
+                render_compliant_row("Wildcard Parameters Allowed", "No (Strict Parameter Enforced)")
+
+            if whitelisted:
+                render_row("Whitelisted Management IPs", whitelisted)
             else:
-                row4("Whitelisted Management IPs", "Nil")
+                render_compliant_row("Whitelisted Management IPs", "Nil")
+
     pdf.output('WAF_policy_review.pdf')
     print("\n[Audit Pipeline Success] 'WAF_policy_review.pdf' created successfully.")

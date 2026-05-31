@@ -54,6 +54,24 @@ Generates `WAF_policy_review.pdf` in the current directory containing:
 Designed for F5 BIG-IP ASM WAF environments. Requires application 
 profile configuration exported in JSON format from F5 BIG-IP.
 
+## A Note on Development Philosophy
+
+This tool was built by a security governance professional, 
+not a software developer. I taught myself Python specifically 
+to solve this operational problem — studying TCM Security's 
+Python fundamentals and intermediate courses before writing 
+a single line of production code.
+
+AI-assisted pair programming was used to optimize PDF layout 
+rendering logic. The security domain knowledge, compliance 
+logic, F5 BIG-IP ASM JSON schema understanding, and audit 
+framework design are entirely my own.
+
+This reflects a core belief: security professionals who can 
+automate their own governance processes are more effective 
+than those who cannot. The 93% reduction in audit cycle time 
+validates that belief.
+
 ## Disclaimer
 This tool is intended for authorized security review purposes only. 
 Ensure you have appropriate authorization before reviewing WAF configurations.

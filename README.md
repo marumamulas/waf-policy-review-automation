@@ -73,8 +73,15 @@ than those who cannot. The 93% reduction in audit cycle time
 validates that belief.
 
 ## Disclaimer
-This tool is intended for authorized security review purposes only. 
-Ensure you have appropriate authorization before reviewing WAF configurations.
+
+This tool was developed as a personal learning project to build Python 
+programming skills applied to security automation. It contains no 
+proprietary or confidential information from any organization and is 
+designed for general use with F5 BIG-IP ASM environments.
+
+The generated report template includes placeholder disclaimer text 
+intended to be customized by the user for their specific organizational 
+requirements.
 
 ## Author
 Siddeshwar Marumamula  
